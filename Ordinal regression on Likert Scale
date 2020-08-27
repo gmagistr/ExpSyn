@@ -1,0 +1,22 @@
+#code in R for analyzing the data that we collected on Likert Scale 
+
+install.packages("tidyverse")
+install.packages("ordinal")
+install.packages("lme4")
+library(tidyverse)
+library(ordinal)
+library(lme4)
+
+#we need to find a way to also consider the participants
+judgement_split <- read.csv("//client/H$/Downloads/judgement_split.csv", sep=";") #the file is a csv file called "judgement_split" because it only contains the items that are relevant for us. It is in the indicated folder, of course
+View(judgement_split)
+
+#let's manipulate the dataframe, since we must have a column with all numbers and the tag with the variables
+df_pivot= judgement_split %>% 
++     pivot_longer(1:length(.)) %>% 
++ separate(name, into = c("Semantics", "Position", "Scope"), sep = c(1,2,3))
+>df_pivot #that's the name of the sorted dataframe 
+
+#We must now instruct the program that the values are ordinal and not continuous
+df_pivot$value <-factor(df_pivot$value, ordered = TRUE)
+#
