@@ -1,22 +1,61 @@
-#code in R for analyzing the data that we collected on Likert Scale 
+---
+title: "Ordinal regression"
+output: html_document
+---
 
-install.packages("tidyverse")
-install.packages("ordinal")
-install.packages("lme4")
+```{r setup, include=FALSE}
+
+```
+
+```{r data_loading, include = FALSE}
+
+
+
+```
+```{r data_preparing}
+#Load the dataframe
+View(table)
+summary(table)
+
+```
+```{r data_viz}
+library(dplyr) 
+library(sjPlot)
+library(sjmisc)
 library(tidyverse)
+#Let's visualize the raw data. I create a new df with the columns (sentences) that I would like to plot.
+df4viz <- table %>% select(Ceiling3, Ceiling1, Ceiling2,  MP1, MP2, MP5, MP4, MP3, MI5, MI2, MI4, MI1, MI3, UI3, UI4, UI5, UI2, UI1, UP3, UP1, UP5, UP2, UP4, WordSalad1, WordSalad2, WordSalad3)
+plot_likert(
+ df4viz,
+grid.range = c(1.2, 1.4),
+ expand.grid = TRUE,
+values = "sum.outside",
+show.prc.sign = TRUE, 
+ catcount = 7)
+
+```
+
+
+``` {r regression}
+library(reshape)
 library(ordinal)
-library(lme4)
+dfr <- table %>% select(-c(Context.dialect, Occupation, Origin_Parents, Origin, L1, dialect_rarity)) #I take out variables that won't be considered in the regression
+dfr <- table %>% gather(key = "type", value =  "value", Ceiling3, Ceiling1, Ceiling2,  MP1, MP2, MP5, MP4, MP3, MI5, MI2, MI4, MI1, MI3, UI3, UI4, UI5, UI2, UI1, UP3, UP1, UP5, UP2, UP4, WordSalad1, WordSalad2, WordSalad3) #In order to do the regression, I need a table with two columns, the specification for the type of clause and the given value, hence we need to melt the dataset, done by gather()
 
-#we need to find a way to also consider the participants
-judgement_split <- read.csv("//client/H$/Downloads/judgement_split.csv", sep=";") #the file is a csv file called "judgement_split" because it only contains the items that are relevant for us. It is in the indicated folder, of course
-View(judgement_split)
-
-#let's manipulate the dataframe, since we must have a column with all numbers and the tag with the variables
-df_pivot= judgement_split %>% 
-+     pivot_longer(1:length(.)) %>% 
-+ separate(name, into = c("Semantics", "Position", "Scope"), sep = c(1,2,3))
->df_pivot #that's the name of the sorted dataframe 
-
-#We must now instruct the program that the values are ordinal and not continuous
-df_pivot$value <-factor(df_pivot$value, ordered = TRUE)
-#
+mnull <- clm(as.factor(value) ~ 1, data = dfr) #first null model
+m1 <- clm(as.factor(value)~Inform, data = dfr) #model with a factor
+m2 <- clm(as.factor(value)~Inform*position, data = dfr) 
+m3 <- clmm(as.factor(value) ~ Inform*position + (1|participant), data = dfr) #To avoid Type-I problems, I include the participant as random intercept
+m4 <- clmm(as.factor(value) ~ Inform*position + (1|participant) + DialectalArea, data = dfr) #Include the Dialectal Area as fixed effect
+summary(m5) #I check the results
+summary(m4) 
+anova(m3, m4) #Take the model with the lowest AIC
+anova(m2,m3)
+anova(m1, m3) #We do need to include Inform, position and random effects
+```
+```{r assumptions for ordinal regressions}
+library(MASS)
+library(brant)
+m3t <- polr(as.factor(value) ~ Inform*position, data = dfr, Hess = TRUE)
+brant(m3t) #Statistical assumptions hold?
+```
